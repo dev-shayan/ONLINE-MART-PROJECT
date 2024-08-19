@@ -1,32 +1,60 @@
-version: "3.8"
-name: template01
+name: ONLINE MART PROJECT
 services:
-  product-service:
-    container_name: product-service
+# Product-service:
+  product-service-api:
+    container_name: ProductService-ApiContainer
     build:
       context: ./product-service
       dockerfile: Dockerfile.dev
-      
+
     volumes:
-      - ./product-service:/code  # Sync local development directory with the container
+      - ./product-service:/code # Sync local development directory with the container
     depends_on:
-      - postgres_db
+      - product-service-db
       # - broker
     ports:
       - "8000:8000" # Expose container port 8000 to host port 8000
-  
-  Product-service-db:
+  product-service-db:
     image: postgres:latest # Use the official PostgreSQL image
     restart: always
-    container_name: ProductService-PostgresCont
+    container_name: ProductService-PostgresContainer
     environment:
-      - POSTGRES_USER=Shayankhan
-      - POSTGRES_PASSWORD=mysecretpassword
-      - POSTGRES_DB=product-service-db
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - product-service-db:/var/lib/postgresql/data
+
+# Order-service:
+  order-service-api:
+    container_name: Order-service-ApiContainer
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile.dev
+
+    volumes:
+      - ./order-service:/code # Sync local development directory with the container
+    depends_on:
+      - order-service-db
+      # - broker
+    ports:
+      - "8001:8000" # Expose container port 8000 to host port 8000
+  order-service-db:
+    image: postgres:latest # Use the official PostgreSQL image
+    restart: always
+    container_name: OrderService-PostgresContainer
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     ports:
       - "5433:5432"
     volumes:
-      - Product-service-db:/var/lib/postgresql/data
+      - order-service-db:/var/lib/postgresql/data
+
+
   # broker:
   #   image: apache/kafka:3.7.0
   #   hostname: broker
@@ -64,8 +92,12 @@ services:
   #     DYNAMIC_CONFIG_ENABLED: "true"
   #   depends_on:
   #     - broker
+
+
 volumes:
-  Product-service-db:
+  order-service-db:
+    driver: local
+  product-service-db:
     driver: local
 networks:
   default:
