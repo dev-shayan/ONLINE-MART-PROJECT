@@ -5,8 +5,9 @@ from app import settings
 
 logger = logging.getLogger(__name__)
 
+# yaha pr product ki type q nai di
 async def produce_message(product, producer: AIOKafkaProducer, operation: str):
-    
+
     try:
         protobuf_product = product_pb2.Product(
             id=product.id,
@@ -17,14 +18,19 @@ async def produce_message(product, producer: AIOKafkaProducer, operation: str):
             quantity=product.quantity,
             brand=product.brand,
         )
-
+        logger.info(f"Value of ID: {product.id}")
         serialized_product = protobuf_product.SerializeToString()
-        
-        operation_bytes = operation.encode('utf-8')  # Convert operation to bytes
+
+        operation_bytes = operation.encode("utf-8")  # Convert operation to bytes
         logger.info(f"operation_bytes: {operation_bytes}")
 
-        await producer.send_and_wait(topic=settings.KAFKA_PRODUCT_TOPIC, value=serialized_product, key=operation_bytes)
+        await producer.send_and_wait(
+            topic=settings.KAFKA_PRODUCT_TOPIC,
+            value=serialized_product,
+            key=operation_bytes,
+        )
         logger.info(f"Message produced successfully: {protobuf_product}")
+        logger.info(f"Operation: {operation}")
     except Exception as e:
         logger.error(f"Failed to produce message: {str(e)}")
         raise RuntimeError(f"Failed to produce message: {str(e)}")
