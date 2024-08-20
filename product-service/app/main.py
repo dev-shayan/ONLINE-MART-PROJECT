@@ -1,116 +1,117 @@
 import logging
-from fastapi import FastAPI, Depends, HTTPException, Request
-from fastapi.responses import JSONResponse
-from sqlmodel import Session
-import asyncio
-from app import settings
-from sqlalchemy.exc import IntegrityError
-from pydantic import ValidationError
-from aiokafka import AIOKafkaProducer
-from app.deps import get_kafka_producer
-import json
-from app.kafka.producer.productProducer import produce_message
-from app.kafka.consumer.productConsumer import consume_products
-from typing import Annotated
 from contextlib import asynccontextmanager
-from app.models import Product, ProductUpdate
-from app.database import create_tables
-from app.crud.crud import create_product, get_all_products, get_single_product, update_product, delete_product, delete_all_products
+from fastapi import FastAPI, Depends, HTTPException
+from sqlmodel import Session, SQLModel
+from typing import Annotated, AsyncGenerator
+from aiokafka import AIOKafkaProducer
+import asyncio
 
-# Setup logging
+from app import settings
+from app.db_engine import engine
+from app.deps import get_session, kafka_producer
+from app.models.product_model import Product, ProductUpdate
+from app.crud.product_crud import get_all_products, get_product_by_id, validate_id, update_product
+
+from app.kafka.producers.product_producer import produce_message
+from app.kafka.consumers.product_consumer import consume_products
+
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def create_db_and_tables() -> None:
+    SQLModel.metadata.create_all(engine)
+    logger.info("Database tables created successfully")
+
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI)-> AsyncGenerator[None, None]:
     logger.info("Product Service Starting...")
-    
-    create_tables()
+    create_db_and_tables()
     task = asyncio.create_task(consume_products(
         settings.KAFKA_PRODUCT_TOPIC, 
         settings.BOOTSTRAP_SERVER, 
         settings.KAFKA_CONSUMER_GROUP_ID_FOR_PRODUCT
         ))
+    
     yield
     logger.info("Product Service Closing...")
 
 app = FastAPI(
     lifespan=lifespan,
-    title="Product Catalog Service",
-    version="1.0.0",
+    title="Product Service",
+    version="0.0.1",
 )
 
-# Custom exception handlers
-@app.exception_handler(IntegrityError)
-async def integrity_error_handler(request: Request, exc: IntegrityError):
-    logger.error(f"IntegrityError: {exc}")
-    return JSONResponse(
-        status_code=400,
-        content={"detail": "A database integrity error occurred."},
-    )
+@app.get('/')
+def start():
+    return {"message": "Product Service"}
 
-@app.exception_handler(ValidationError)
-async def validation_error_handler(request: Request, exc: ValidationError):
-    logger.error(f"ValidationError: {exc}")
-    return JSONResponse(
-        status_code=422,
-        content={"detail": "Validation error occurred."},
-    )
 
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Unhandled Exception: {exc}")
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "An internal server error occurred."},
-    )
 
-@app.get("/")
-async def root():
-    return {"msg": "Welcome to the Product Catalog Service"}
 
-@app.post("/products/", response_model=Product)
-async def create_product_endpoint(product: Product, producer: Annotated[AIOKafkaProducer, Depends(get_kafka_producer)]):
-    logger.info(f"Creating product: {product}")
-    await produce_message(product,producer)
-    logger.info(f"Product created: {product}")
+@app.post('/product', response_model=Product)
+async def call_add_product(
+    product: Product, 
+    session: Annotated[Session, Depends(get_session)], 
+    producer: Annotated[AIOKafkaProducer, Depends(kafka_producer)]):
+
+    existing_product = validate_id(product.id, session)
+
+    if existing_product:
+        raise HTTPException(status_code=400, detail=f"Product with ID {product.id} already exists")
+    
+    await produce_message(product, producer, "create")
+
+
     return product
 
 
-# @app.get("/products/", response_model=list[Product])
-# async def get_all_products_endpoint(session: Annotated[Session, Depends(get_session)]):
-#     products = get_all_products(session)
-#     if products:
-#         return products
-#     else:
-#         raise HTTPException(status_code=404, detail="No products found")
 
-# @app.get("/products/{id}", response_model=Product)
-# async def get_single_product_endpoint(id: int, session: Annotated[Session, Depends(get_session)]):
-#     product = get_single_product(session, id)
-#     if product:
-#         return product
-#     else:
-#         raise HTTPException(status_code=404, detail="Product not found")
 
-# @app.put("/products/{id}")
-# async def update_product_endpoint(
-#     id: int, product: ProductUpdate, session: Annotated[Session, Depends(get_session)]
-# ):
-#     updated_product = update_product(session, id, product)
-#     if updated_product:
-#         return updated_product
-#     else:
-#         raise HTTPException(status_code=404, detail="Product not found")
+@app.get('/product/all', response_model=list[Product])
+def call_get_all_product(session: Annotated[Session, Depends(get_session)]):
+    return get_all_products(session)
 
-# @app.delete("/products/{id}")
-# async def delete_product_endpoint(id: int, session: Annotated[Session, Depends(get_session)]):
-#     if delete_product(session, id):
-#         return {"message": "Product successfully deleted"}
-#     else:
-#         raise HTTPException(status_code=404, detail="Product not found")
 
-# @app.delete("/products/")
-# async def delete_all_products_endpoint(session: Annotated[Session, Depends(get_session)]):
-#     delete_all_products(session)
-#     return {"message": "All products successfully deleted"}
+
+
+@app.get('/product/{id}', response_model=Product)
+def call_get_product_by_id(id: int, session: Annotated[Session, Depends(get_session)]):
+    
+    return get_product_by_id(id=id, session=session)
+
+
+
+
+@app.patch('/product/{id}', response_model=Product)
+async def call_update_product(
+    id: int, 
+    product: ProductUpdate, 
+    session: Annotated[Session, Depends(get_session)], 
+    producer: Annotated[AIOKafkaProducer, Depends(kafka_producer)]
+):
+    logger.info(f"Product id {id} Product Update: {product}")
+
+    # Get the existing product
+    existing_product = get_product_by_id(id, session)
+
+    # Update the existing product only with the provided fields
+    updated_product = update_product(id, product, session)
+
+    logger.info(f"Updated Product: {updated_product}")
+    
+    # Produce the Kafka message
+    await produce_message(updated_product, producer, "update")
+
+    return updated_product
+
+
+
+
+@app.delete('/product/{id}', response_model=dict)
+async def call_delete_product_by_id(id: int, session: Annotated[Session, Depends(get_session)],producer: Annotated[AIOKafkaProducer, Depends(kafka_producer)]):
+
+    call_get_product_by_id(id, session)
+    await produce_message(Product(id=id), producer, "delete")
+
+    return {"deleted_id": id}

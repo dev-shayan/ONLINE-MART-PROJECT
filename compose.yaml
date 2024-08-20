@@ -1,58 +1,35 @@
-name: ONLINE MART PROJECT
+# version: "3.9"
+
+name: mart
+
 services:
-  # Product-service:
-  product-service-api:
-    container_name: ProductService-ApiContainer
+# Product Service
+  product-service:
     build:
       context: ./product-service
       dockerfile: Dockerfile.dev
-
     volumes:
-      - ./product-service:/code # Sync local development directory with the container
+      - ./product-service:/code 
     depends_on:
-      - product-service-db
+      - postgres_product_db
       - broker
     ports:
-      - "8000:8000" # Expose container port 8000 to host port 8000
-  product-service-db:
-    image: postgres:latest # Use the official PostgreSQL image
+      - "8006:8006"    
+
+# Product Database
+  postgres_product_db:
+    image: postgres:latest 
     restart: always
-    container_name: ProductService-PostgresContainer
+    container_name: PostgresProductCont
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
+        - POSTGRES_USER=Shayankhan
+        - POSTGRES_PASSWORD=mypassword
+        - POSTGRES_DB=product_db
     ports:
-      - "5432:5432"
+        - '5436:5432'
     volumes:
-      - product-service-db:/var/lib/postgresql/data
+        - postgres_product_db:/var/lib/postgresql/data
 
-# # Inventry-service:
-#   inventry-service-api:
-#     container_name: InventryService-ApiContainer
-#     build:
-#       context: ./inventry-service
-#       dockerfile: Dockerfile.dev
-
-#     volumes:
-#       - ./inventry-service:/code # Sync local development directory with the container
-#     depends_on:
-#       - inventry-service-db
-#       - broker
-#     ports:
-#       - "8001:8000" # Expose container port 8000 to host port 8000
-#   inventry-service-db:
-#     image: postgres:latest # Use the official PostgreSQL image
-#     restart: always
-#     container_name: InventryService-PostgresContainer
-#     environment:
-#       - POSTGRES_USER=${POSTGRES_USER}
-#       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-#       - POSTGRES_DB=${POSTGRES_DB}
-#     ports:
-#       - "5433:5432"
-#     volumes:
-#       - inventry-service-db:/var/lib/postgresql/data
 
   broker:
     image: apache/kafka:3.7.0
@@ -63,7 +40,7 @@ services:
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
-      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT_HOST://localhost:9092,PLAINTEXT://broker:19092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT_HOST://localhost:9092,PLAINTEXT://broker:19092'      
       KAFKA_PROCESS_ROLES: 'broker,controller'
       KAFKA_CONTROLLER_QUORUM_VOTERS: '1@broker:29093'
       KAFKA_LISTENERS: 'CONTROLLER://:29093,PLAINTEXT_HOST://:9092,PLAINTEXT://:19092'
@@ -75,7 +52,6 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
-
 
   kafka-ui:
     image: provectuslabs/kafka-ui
@@ -89,11 +65,11 @@ services:
     depends_on:
       - broker
 
+
 volumes:
-  inventry-service-db:
-    driver: local
-  product-service-db:
-    driver: local
+  postgres_product_db:
+    driver: local 
+
 networks:
   default:
     driver: bridge
