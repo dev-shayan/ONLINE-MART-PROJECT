@@ -27,13 +27,3 @@ except Exception as e:
 def create_tables():
     SQLModel.metadata.create_all(engine)
 
-
-def get_session():
-    try:
-        with Session(engine) as session:
-            yield session
-    except OperationalError as e:
-        logger.error(f"Database connection failed,something wrong with the session: {e}")
-        raise HTTPException(status_code=500, detail="Database connection failed")
-
-

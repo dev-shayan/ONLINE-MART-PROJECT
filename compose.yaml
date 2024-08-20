@@ -1,6 +1,6 @@
 name: ONLINE MART PROJECT
 services:
-# Product-service:
+  # Product-service:
   product-service-api:
     container_name: ProductService-ApiContainer
     build:
@@ -11,7 +11,7 @@ services:
       - ./product-service:/code # Sync local development directory with the container
     depends_on:
       - product-service-db
-      # - broker
+      - broker
     ports:
       - "8000:8000" # Expose container port 8000 to host port 8000
   product-service-db:
@@ -27,75 +27,70 @@ services:
     volumes:
       - product-service-db:/var/lib/postgresql/data
 
-# Order-service:
-  order-service-api:
-    container_name: Order-service-ApiContainer
-    build:
-      context: ./order-service
-      dockerfile: Dockerfile.dev
+# # Inventry-service:
+#   inventry-service-api:
+#     container_name: InventryService-ApiContainer
+#     build:
+#       context: ./inventry-service
+#       dockerfile: Dockerfile.dev
 
-    volumes:
-      - ./order-service:/code # Sync local development directory with the container
-    depends_on:
-      - order-service-db
-      # - broker
+#     volumes:
+#       - ./inventry-service:/code # Sync local development directory with the container
+#     depends_on:
+#       - inventry-service-db
+#       - broker
+#     ports:
+#       - "8001:8000" # Expose container port 8000 to host port 8000
+#   inventry-service-db:
+#     image: postgres:latest # Use the official PostgreSQL image
+#     restart: always
+#     container_name: InventryService-PostgresContainer
+#     environment:
+#       - POSTGRES_USER=${POSTGRES_USER}
+#       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+#       - POSTGRES_DB=${POSTGRES_DB}
+#     ports:
+#       - "5433:5432"
+#     volumes:
+#       - inventry-service-db:/var/lib/postgresql/data
+
+  broker:
+    image: apache/kafka:3.7.0
+    hostname: broker
+    container_name: broker
     ports:
-      - "8001:8000" # Expose container port 8000 to host port 8000
-  order-service-db:
-    image: postgres:latest # Use the official PostgreSQL image
-    restart: always
-    container_name: OrderService-PostgresContainer
+      - '9092:9092'
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT_HOST://localhost:9092,PLAINTEXT://broker:19092'
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@broker:29093'
+      KAFKA_LISTENERS: 'CONTROLLER://:29093,PLAINTEXT_HOST://:9092,PLAINTEXT://:19092'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      CLUSTER_ID: '4L6g3nShT-eMCtK--X86sw'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    container_name: kafka-ui
     ports:
-      - "5433:5432"
-    volumes:
-      - order-service-db:/var/lib/postgresql/data
-
-
-  # broker:
-  #   image: apache/kafka:3.7.0
-  #   hostname: broker
-  #   container_name: broker
-  #   ports:
-  #     - "9092:9092"
-  #     # bind mound
-  #   # volumes:
-  #   #   - /create-topic.sh:/user/local/bin/create-topic.sh
-  #   # entrypoint: ["bash", "-c", "sleep 60 && /user/local/bin/create-topic.sh"]
-  #   environment:
-  #     KAFKA_NODE_ID: 1
-  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
-  #     KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT_HOST://localhost:9092,PLAINTEXT://broker:19092"
-  #     KAFKA_PROCESS_ROLES: "broker,controller"
-  #     KAFKA_CONTROLLER_QUORUM_VOTERS: "1@broker:29093"
-  #     KAFKA_LISTENERS: "CONTROLLER://:29093,PLAINTEXT_HOST://:9092,PLAINTEXT://:19092"
-  #     KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
-  #     KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
-  #     CLUSTER_ID: "4L6g3nShT-eMCtK--X86sw"
-  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-  #     KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-  #     KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-  #     KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-  #     KAFKA_LOG_DIRS: "/tmp/kraft-combined-logs"
-
-  # kafka-ui:
-  #   image: provectuslabs/kafka-ui
-  #   container_name: kafka-ui
-  #   ports:
-  #     - "8080:8080"
-  #   environment:
-  #     KAFKA_CLUSTERS_0_NAME: "Local Kafka Cluster"
-  #     KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "broker:19092"
-  #     DYNAMIC_CONFIG_ENABLED: "true"
-  #   depends_on:
-  #     - broker
-
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: 'Local Kafka Cluster'
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: 'broker:19092'
+      DYNAMIC_CONFIG_ENABLED: "true"
+    depends_on:
+      - broker
 
 volumes:
-  order-service-db:
+  inventry-service-db:
     driver: local
   product-service-db:
     driver: local
