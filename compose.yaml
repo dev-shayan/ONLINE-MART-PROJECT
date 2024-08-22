@@ -30,6 +30,32 @@ services:
     volumes:
         - postgres_product_db:/var/lib/postgresql/data
 
+# Inventory Service
+  inventory-service:
+    build:
+      context: ./inventory-service
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./inventory-service:/code 
+    depends_on:
+      - postgres_inventory_db
+      - broker
+    ports:
+      - "8007:8007"    
+
+# Inventory Database
+  postgres_inventory_db:
+    image: postgres:latest 
+    restart: always
+    container_name: PostgresInventoryCont
+    environment:
+        - POSTGRES_USER=Shayankhan
+        - POSTGRES_PASSWORD=mypassword
+        - POSTGRES_DB=inventory_db
+    ports:
+        - '5437:5432'
+    volumes:
+        - postgres_inventory_db:/var/lib/postgresql/data
 
   broker:
     image: apache/kafka:3.7.0
@@ -69,6 +95,8 @@ services:
 volumes:
   postgres_product_db:
     driver: local 
+  postgres_inventory_db:
+    driver: local
 
 networks:
   default:

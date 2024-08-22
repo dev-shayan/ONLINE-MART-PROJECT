@@ -6,7 +6,7 @@ class Product(SQLModel, table=True):
     title: str
     description: str | None = None
     category: str
-    price: float
+    price: int
     quantity: int
     brand: str | None = None
 
@@ -16,6 +16,6 @@ class ProductUpdate(SQLModel):
     title: str | None = None
     description: str | None = None
     category: str | None = None
-    price: float | None = None
+    price: int | None = None
     quantity: int | None = None
     brand: str | None = None
