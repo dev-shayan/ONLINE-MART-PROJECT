@@ -31,31 +31,52 @@ async def process_message(protobuf_product: product_pb2.Product, operation: str)
         if protobuf_product.id == 0:
             sqlmodel_product.id = None
 
-        logger.info(f"Converted SQLModel Product Data: {sqlmodel_product}")
+        logger.info(f'''Converted SQLModel Product Data: {sqlmodel_product}
+        
+
+        ''')
 
         with next(get_session()) as session:
             if operation == "create":
                 db_insert_product = add_product(sqlmodel_product, session=session)
-                logger.info(f"DB Inserted Product ID: {db_insert_product.id}")
+                logger.info(f'''DB Inserted Product ID: {db_insert_product.id}
+                
+                ''')
                 logger.info(f"DB Inserted Product: {db_insert_product}")
-                logger.info("Added product to the database")
+                logger.info(f'''Added product to the database'''
+                
+                )
 
             elif operation == "update":
+                if sqlmodel_product.id is None:
+                    sqlmodel_product.id = 0
                 db_update_product = update_product(
                     sqlmodel_product.id,
                     ProductUpdate(**sqlmodel_product.dict()),
                     session=session,
                 )
-                logger.info(f"DB Updated Product: {db_update_product}")
-                logger.info("Updated product in the database")
+                logger.info(f'''DB Updated Product: {db_update_product}
+                ''')
+                logger.info(f'''
+                
+    Updated product in the database
+                
+    ''')
 
             elif operation == "delete":
+                if sqlmodel_product.id is None:
+                    sqlmodel_product.id = 0
                 logger.info(f"Attempting to delete product with ID: {sqlmodel_product.id}")
                 db_delete_product = delete_product_by_id(
                     sqlmodel_product.id, session=session
                 )
-                logger.info(f"DB Deleted Product: {db_delete_product}")
-                logger.info("Deleted product from the database")
+                logger.info(f'''DB Deleted Product: {db_delete_product}
+                ''')
+                logger.info(f'''
+                
+    Deleted product from the database
+                
+    ''')
 
     except HTTPException as e:
         logger.error(f"HTTPException: {e.detail}")
@@ -76,10 +97,18 @@ async def consume_products(topic, bootstrap_servers, group_id):
                 group_id=group_id,
                 auto_offset_reset="earliest",
             )
+            logger.info(f'''
 
-            logger.info("Consumer created, attempting to start...")
+    Consumer created, attempting to start...
+    
+    '''
+            )
             await consumer.start()
-            logger.info("Consumer started successfully")
+            logger.info(f'''
+
+    Consumer started successfully
+            
+    ''')
             break
         except KafkaConnectionError as e:
             retries += 1
@@ -99,11 +128,13 @@ async def consume_products(topic, bootstrap_servers, group_id):
             protobuf_product = product_pb2.Product()
             # yaha pr aik sath likh dete in dono ko neechy wali line ka kya faida hai
             protobuf_product.ParseFromString(msg.value)
-            logger.info(f"Value of ID: {protobuf_product.id}")
+            logger.info(f'''
+        
+Value of Product ID from protobuf: {protobuf_product.id}''')
             logger.info(f"Consumed Product Data: {protobuf_product}")
-
             operation = msg.key.decode("utf-8")  # Decode the operation key
-            logger.info(f"Operation: {operation}")
+            logger.info(f'''Operation: {operation}
+            ''')
 
             await process_message(protobuf_product, operation)
     except KafkaError as e:

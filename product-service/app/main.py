@@ -26,12 +26,20 @@ logger = logging.getLogger(__name__)
 
 def create_db_and_tables() -> None:
     SQLModel.metadata.create_all(engine)
-    logger.info("Database tables created successfully")
+    logger.info(f'''
+    
+    Database tables created successfully
+    
+    ''')
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    logger.info("Product Service Starting...")
+    logger.info(f'''
+
+    Product Service Starting...
+    
+    ''')
     create_db_and_tables()
     task = asyncio.create_task(
         consume_products(
@@ -67,7 +75,9 @@ async def call_add_product(
 
     if existing_product:
         raise HTTPException(
-            status_code=400, detail=f"Product with ID {product.id} already exists"
+            status_code=400, detail=f'''Product with ID {product.id} already exists
+            
+            '''
         )
 
     await produce_message(product, producer, "create")
@@ -93,7 +103,9 @@ async def call_update_product(
     session: Annotated[Session, Depends(get_session)],
     producer: Annotated[AIOKafkaProducer, Depends(kafka_producer)],
 ):
-    logger.info(f"Product id {id} Product Update: {product}")
+    logger.info(f'''Product id {id} Product Update: {product}
+    
+    ''')
 
     # Get the existing product
     existing_product = get_product_by_id(id, session)
@@ -101,7 +113,9 @@ async def call_update_product(
     # Update the existing product only with the provided fields
     updated_product = update_product(id, product, session)
 
-    logger.info(f"Updated Product: {updated_product}")
+    logger.info(f'''Updated Product: {updated_product}
+    
+    ''')
 
     # Produce the Kafka message
     await produce_message(updated_product, producer, "update")

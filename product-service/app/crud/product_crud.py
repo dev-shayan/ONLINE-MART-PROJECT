@@ -71,7 +71,8 @@ def delete_product_by_id(id: int, session: Session) -> dict:
     session.delete(product)
     session.commit()
 
-    logging.info(f"Product with ID {id} deleted and committed to the database.")
+    logging.info(f'''Product with ID {id} deleted and committed to the database. 
+    ''')
     return {"message": "Product Deleted Successfully"}
 
 

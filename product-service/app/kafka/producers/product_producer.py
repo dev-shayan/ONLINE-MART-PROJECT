@@ -22,7 +22,7 @@ async def produce_message(product, producer: AIOKafkaProducer, operation: str):
         serialized_product = protobuf_product.SerializeToString()
 
         operation_bytes = operation.encode("utf-8")  # Convert operation to bytes
-        logger.info(f"operation_bytes: {operation_bytes}")
+        logger.info(f"operation_bytes: {operation_bytes}/")
 
         await producer.send_and_wait(
             topic=settings.KAFKA_PRODUCT_TOPIC,
