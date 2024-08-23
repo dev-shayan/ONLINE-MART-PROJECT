@@ -17,21 +17,27 @@ def get_all_payments(session: Session):
     return all_payments
 
 def get_payment_by_id(payment_id: int, session: Session ):
+    logger.info(f"Retrieving payment with ID: {payment_id}")
     payment =  session.exec(select(Payment).where(Payment.id == payment_id)).one_or_none()
+    logger.info(f"Payment: {payment}")
     if payment is None:
         raise HTTPException(status_code=404, detail=f"No Payment Record found with the id: {payment_id}")
     return payment
 
 def get_payment_by_order_id(order_id: int, session: Session):
+    logger.info(f"Retrieving payment with order ID: {order_id}")
     payment = session.query(Payment).filter(Payment.order_id == order_id).first()
+    logger.info(f"Payment: {payment}")
     if payment is None:
         raise HTTPException(status_code=404, detail=f"No Payment Record found with the order id: {order_id}")
     return payment
 
 
-def update_payment(payment_id: int, payment_data: Payment, session: Session):
-    payment = get_payment_by_id(payment_id, session)  # Retrieve existing payment from the database
+def update_payment(order_id: int, payment_data: Payment, session: Session):
+    logger.info(f"Updating payment with order ID: {order_id}")
+    payment = get_payment_by_order_id(order_id, session)  # Retrieve existing payment from the database
     
+    logger.info(f"Updating payment with ID: {payment.id}")
     # Update only the fields that are present in payment_data, excluding the 'id' field
     hero_data = payment_data.model_dump(exclude_unset=True, exclude={"id"})
     

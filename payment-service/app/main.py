@@ -9,11 +9,12 @@ import asyncio
 
 from app import settings
 from app.db_engine import engine
-from app.deps import get_session, kafka_producer
+from app.deps import get_session
 from app.models.payment_model import Payment
 from app.crud.payment_crud import (
     get_all_payments,
     get_payment_by_id,
+    get_payment_by_order_id,
     update_payment,
 )
 from app.kafka.consumers.payment_consumer import consume_payments
@@ -41,7 +42,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     create_db_and_tables()
     task = asyncio.create_task(
         consume_payments(
-            settings.KAFKA_ORDER_TOPIC,
+            settings.KAFKA_AFTERDB_TOPIC,
             settings.BOOTSTRAP_SERVER,
             settings.KAFKA_CONSUMER_GROUP_ID_FOR_PAYMENT,
         )
@@ -71,24 +72,26 @@ def call_get_all_payments(session: Annotated[Session, Depends(get_session)]):
 def call_get_payment_by_id(id: int, session: Annotated[Session, Depends(get_session)]):
     return get_payment_by_id(id=id, session=session)
 
-@app.post('/pay/{order_id}')
-async def pay_order(
-    order_id: int,
-    session: Annotated[Session, Depends(get_session)]
-):
-    payment = get_payment_by_order_id(order_id, session)
+# @app.post('/pay/{order_id}')
+# async def pay_order(
+#     order_id: int,
+#     session: Annotated[Session, Depends(get_session)]
+# ):
+#     logger.info(f"Processing payment for order ID: {order_id}")
+#     payment = get_payment_by_order_id(order_id, session)
 
-    if payment:
-        if payment.status in ["paid", "cancelled"]:
-            raise HTTPException(status_code=400, detail=f"Payment is {payment.status}, cannot process payment.")
+#     if payment:
+#         logger.info(f"Payment: {payment}")
+#         if payment.status in ["paid", "cancelled"]:
+#             raise HTTPException(status_code=400, detail=f"Payment is {payment.status}, cannot process payment.")
         
-        # Mark the payment as "paid"
-        payment_update = Payment(status="paid")
-        updated_payment = update_payment(payment.id, payment_update, session)
+#         # Mark the payment as "paid"
+#         payment_update = Payment(status="paid")
+#         updated_payment = update_payment(payment.id, payment_update, session)
         
-        # Send a message back to the order service that payment is completed
-        # await produce_message_to_order(updated_payment)
+#         # Send a message back to the order service that payment is completed
+#         # await produce_message_to_order(updated_payment)
 
-        return {"message": "Payment successful"}
-    else:
-        raise HTTPException(status_code=404, detail="Payment not found")
+#         return {"message": "Payment successful"}
+#     else:
+#         raise HTTPException(status_code=404, detail="Payment not found")

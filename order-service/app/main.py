@@ -86,31 +86,31 @@ def call_get_all_orders(session: Annotated[Session, Depends(get_session)]):
 def call_get_order_by_id(id: int, session: Annotated[Session, Depends(get_session)]):
     return get_order_by_id(id=id, session=session)
 
-@app.patch("/order/{id}", response_model=OrderModel)
-async def call_update_order(
-    id: int,
-    order: OrderUpdate,
-    session: Annotated[Session, Depends(get_session)],
-    producer: Annotated[AIOKafkaProducer, Depends(kafka_producer)],
-):
-    logger.info(f'''Order id {id} Order Update: {order}
+# @app.patch("/order/{id}", response_model=OrderModel)
+# async def call_update_order(
+#     id: int,
+#     order: OrderUpdate,
+#     session: Annotated[Session, Depends(get_session)],
+#     producer: Annotated[AIOKafkaProducer, Depends(kafka_producer)],
+# ):
+#     logger.info(f'''Order id {id} Order Update: {order}
     
-    ''')
+#     ''')
 
-    # Get the existing order
-    existing_order = get_order_by_id(id, session)
+#     # Get the existing order
+#     existing_order = get_order_by_id(id, session)
 
-    # Update the existing order only with the provided fields
-    updated_order = update_order(id, order, session)
+#     # Update the existing order only with the provided fields
+#     updated_order = update_order(id, order, session)
 
-    logger.info(f'''Updated Order: {updated_order}
+#     logger.info(f'''Updated Order: {updated_order}
     
-    ''')
+#     ''')
 
-    # Produce the Kafka message
-    await produce_message(updated_order, producer, "update")
+#     # Produce the Kafka message
+#     await produce_message(updated_order, producer, "update")
 
-    return updated_order
+#     return updated_order
 
 @app.delete("/order/{id}", response_model=dict)
 async def call_delete_order_by_id(

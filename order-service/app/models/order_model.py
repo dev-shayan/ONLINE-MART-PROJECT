@@ -13,11 +13,11 @@ class OrderModel(SQLModel, table=True):
     product_description: str | None
     product_category: str | None
     product_brand: str | None
-    status : str = Field(default="Processing")
+    status : str = Field(default="Unpaid")
 
 class OrderUpdate(SQLModel):
     # user_id: int | None = None
     quantity: int | None = None
     total_amount: float | None = None
-    status : str | None = Field(default="Processing")
+    status : str | None = Field(default="Unpaid")
     # status: OrderStatus | None = None

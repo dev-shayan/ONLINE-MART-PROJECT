@@ -17,6 +17,7 @@ BOOTSTRAP_SERVER = config("BOOTSTRAP_SERVER", cast=str)
 
 # Topics
 KAFKA_ORDER_TOPIC = config("KAFKA_ORDER_TOPIC", cast=str)
+KAFKA_AFTERDB_TOPIC = config("KAFKA_AFTERDB_TOPIC", cast=str)
 
 # Consumer Group ID
 KAFKA_CONSUMER_GROUP_ID_FOR_ORDER = config(

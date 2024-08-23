@@ -16,7 +16,7 @@ TEST_DATABASE_URL = config("TEST_DATABASE_URL", cast=Secret)
 BOOTSTRAP_SERVER = config("BOOTSTRAP_SERVER", cast=str)
 
 # Topics
-KAFKA_ORDER_TOPIC = config("KAFKA_ORDER_TOPIC", cast=str)
+KAFKA_AFTERDB_TOPIC = config("KAFKA_AFTERDB_TOPIC", cast=str)
 
 # Consumer Group ID
 KAFKA_CONSUMER_GROUP_ID_FOR_PAYMENT = config(

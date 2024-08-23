@@ -6,3 +6,6 @@ class Payment(SQLModel, table=True):
     user_id: int
     amount: float
     status: str  # Could be 'pending', 'completed', 'failed', 'canceled' etc.
+
+class PaymentUpdate(SQLModel):
+    status: str  # Could be 'pending', 'completed', 'failed', 'canceled' etc.

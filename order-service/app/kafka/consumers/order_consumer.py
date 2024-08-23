@@ -7,6 +7,8 @@ from app.crud.order_crud import add_order, update_order, delete_order_by_id
 from app.deps import get_session
 from app.protobuf.order_proto import order_pb2
 import asyncio
+from app.kafka.producers.afterdb_order_producer import produce_afterdb_message
+
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -39,45 +41,50 @@ async def process_message(protobuf_order: order_pb2.Order, operation: str):
 
         logger.info(f'''Converted SQLModel Order Data: {sqlmodel_order}''')
 
-        with next(get_session()) as session:
-            if operation == "create":
+        if operation == "create":
+            with next(get_session()) as session:
                 db_insert_order = add_order(sqlmodel_order, session=session)
                 logger.info(f'''DB Inserted Order ID: {db_insert_order.id}''')
                 logger.info(f"DB Inserted Order: {db_insert_order}")
                 logger.info(f'''
-                
-    Added order in the database
-                
-    ''')
+            
+Added order in the database
+            
+''')
+            await produce_afterdb_message(sqlmodel_order, operation)
 
-            elif operation == "update":
-                if sqlmodel_order.id is None:
-                    sqlmodel_order.id = 0
-                db_update_order = update_order(
-                    sqlmodel_order.id,
-                    OrderUpdate(**sqlmodel_order.dict()),
-                    session=session,
-                )
-                logger.info(f'''DB Updated Order: {db_update_order}''')
-                logger.info(f'''
-                
-    Updated order in the database
-                
-    ''')
+        elif operation == "delete":
 
-            elif operation == "delete":
-                if sqlmodel_order.id is None:
-                    sqlmodel_order.id = 0
-                logger.info(f"Attempting to delete order with ID: {sqlmodel_order.id}")
-                db_delete_order = delete_order_by_id(
-                    sqlmodel_order.id, session=session
-                )
-                logger.info(f'''DB Deleted Order: {db_delete_order}''')
-                logger.info(f'''
+            if sqlmodel_order.id is None:
+                sqlmodel_order.id = 0
+        with next(get_session()) as session:
+            sqlmodel_order.status = "cancelled"
+            db_update_order = update_order(
+            sqlmodel_order.id,
+            OrderUpdate(**sqlmodel_order.dict()),
+            session=session,
+        )
+        logger.info(f'''DB Updated Order: {db_update_order}''')
+        logger.info(f'''
+            
+Updated order in the database
+            
+''')
+        await produce_afterdb_message(sqlmodel_order, operation)
+
+    #     elif operation == "delete":
+    #         if sqlmodel_order.id is None:
+    #             sqlmodel_order.id = 0
+    #         logger.info(f"Attempting to delete order with ID: {sqlmodel_order.id}")
+    #         db_delete_order = delete_order_by_id(
+    #             sqlmodel_order.id, session=session
+    #         )
+    #         logger.info(f'''DB Deleted Order: {db_delete_order}''')
+    #         logger.info(f'''
                 
-    Deleted order from the database
+    # Deleted order from the database
                 
-    ''')
+    # ''')
 
     except HTTPException as e:
         logger.error(f"HTTPException: {e.detail}")

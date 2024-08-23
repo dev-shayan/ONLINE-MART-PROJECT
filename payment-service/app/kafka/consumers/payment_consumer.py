@@ -41,20 +41,20 @@ async def process_message(protobuf_payment: order_pb2.Order, operation: str):
                 
     ''')
 
-    #         elif operation == "update":
-    #             if sqlmodel_payment.id is None:
-    #                 sqlmodel_payment.id = 0
-    #             db_update_payment = update_payment(
-    #                 sqlmodel_payment.id,
-    #                 PaymentUpdate(**sqlmodel_payment.dict()),
-    #                 session=session,
-    #             )
-    #             logger.info(f'''DB Updated Payment: {db_update_payment}''')
-    #             logger.info(f'''
+            elif operation == "delete":
+                if sqlmodel_payment.id is None:
+                    sqlmodel_payment.id = 0
+                db_update_payment = update_payment(
+                    sqlmodel_payment.id,
+                    PaymentUpdate(**sqlmodel_payment.dict()),
+                    session=session,
+                )
+                logger.info(f'''DB Updated Payment: {db_update_payment}''')
+                logger.info(f'''
                 
-    # Updated payment in the database
+    Updated payment in the database
                 
-    # ''')
+    ''')
 
     #         elif operation == "delete":
     #             if sqlmodel_payment.id is None:
